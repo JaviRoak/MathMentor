@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MathMentor — Calculadora Inteligente</title>
+  <link rel="stylesheet" href="styles.css?v=13" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body data-page="home">
+  <div id="app">
+
+    <!-- ============ HOME ============ -->
+    <template v-if="currentView === 'home'">
+
+      <!-- Header -->
+      <header class="site-header">
+        <a href="#" class="site-brand">
+          <span class="brand-dot"></span>
+          <span class="brand-name">Math<span>Mentor</span></span>
+        </a>
+        <nav class="site-nav">
+          <a href="#features">Cómo funciona</a>
+          <a href="#topics">Temas</a>
+          <a href="#stats">Resultados</a>
+          <a href="#" class="nav-cta" @click.prevent="scrollStart">Empezar</a>
+        </nav>
+      </header>
+
+      <!-- Hero -->
+      <section class="hero">
+        <div class="hero-bg-shapes">
+          <div class="shape shape-1"></div>
+          <div class="shape shape-2"></div>
+          <div class="shape shape-3"></div>
+        </div>
+
+        <div class="hero-content">
+          <!-- Mascota -->
+          <div class="mascot" aria-hidden="true">
+            <div class="monitor">
+              <div class="monitor-dots"><span></span><span></span><span></span></div>
+              <div class="eye-row">
+                <div class="eye"></div>
+                <div class="eye"></div>
+              </div>
+            </div>
+            <div class="monitor-stand"></div>
+            <div class="monitor-base"></div>
+            <div class="mascot-status">ONLINE · READY</div>
+          </div>
+
+          <div class="hero-tag">
+            <span class="tag-dot"></span>
+            v1.0 BETA · ALGORITMO ACTIVO
+          </div>
+
+          <h1 class="hero-title">
+            La calculadora<br>
+            que te <span class="accent">enseña</span> <span class="slash">/</span> a pensar.
+          </h1>
+
+          <p class="hero-subtitle">
+            No damos solo el resultado. Desglosamos <strong>cada paso</strong>, explicamos el <strong>concepto</strong> y te retamos con desafíos. Aritmética, álgebra, fracciones y más.
+          </p>
+
+          <div class="age-selector" id="start">
+            <p class="age-label">// Selecciona tu nivel</p>
+            <div class="age-buttons">
+              <button
+                v-for="age in ageRanges"
+                :key="age.value"
+                :class="['age-btn', { active: selectedAge === age.value }]"
+                @click="selectedAge = age.value"
+              >{{ age.label }}</button>
+            </div>
+          </div>
+
+          <div class="cta-row">
+            <button class="cta-btn" @click="startApp" :disabled="!selectedAge">
+              <span>Iniciar sesión</span>
+              <span class="cta-arrow">→</span>
+            </button>
+            <a class="cta-ghost" href="#features">
+              Ver cómo funciona
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section class="section" id="features">
+        <div class="section-inner">
+          <div class="section-head">
+            <span class="section-eyebrow">// CÓMO FUNCIONA</span>
+            <h2 class="section-title">Entiende <span class="accent">qué</span> pasa, no solo el resultado.</h2>
+            <p class="section-desc">Diseñado para estudiantes de 10 a 15 años. Cada respuesta viene con desglose, concepto clave y un reto para reforzar el aprendizaje.</p>
+          </div>
+
+          <div class="feature-grid">
+            <div class="feature-card">
+              <div class="fc-num">01</div>
+              <div class="fc-icon">◐</div>
+              <h3>Paso a paso</h3>
+              <p>Cada operación se descompone en pasos ordenados con explicación clara del porqué.</p>
+            </div>
+            <div class="feature-card">
+              <div class="fc-num">02</div>
+              <div class="fc-icon">◇</div>
+              <h3>Concepto clave</h3>
+              <p>Al final de cada ejercicio, un resumen del principio matemático que acabas de aplicar.</p>
+            </div>
+            <div class="feature-card">
+              <div class="fc-num">03</div>
+              <div class="fc-icon">△</div>
+              <h3>Desafío instantáneo</h3>
+              <p>Un mini-reto tras cada problema para verificar que realmente lo entendiste.</p>
+            </div>
+            <div class="feature-card">
+              <div class="fc-num">04</div>
+              <div class="fc-icon">◎</div>
+              <h3>Niveles adaptativos</h3>
+              <p>Temas que crecen contigo: desde aritmética básica hasta álgebra y raíces.</p>
+            </div>
+            <div class="feature-card">
+              <div class="fc-num">05</div>
+              <div class="fc-icon">▨</div>
+              <h3>Racha de aprendizaje</h3>
+              <p>Tu progreso se registra en una racha que te motiva a practicar cada día.</p>
+            </div>
+            <div class="feature-card">
+              <div class="fc-num">06</div>
+              <div class="fc-icon">✕</div>
+              <h3>Sin distracciones</h3>
+              <p>Interfaz limpia. Sin anuncios, sin ruido. Solo tú y las matemáticas.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stats -->
+      <section class="section" id="stats">
+        <div class="section-inner">
+          <div class="section-head">
+            <span class="section-eyebrow">// RESULTADOS</span>
+            <h2 class="section-title">Aprendizaje <span class="accent">medible</span>.</h2>
+          </div>
+
+          <div class="stats-strip">
+            <div class="stat">
+              <div class="stat-num">6</div>
+              <div class="stat-label">Temas</div>
+            </div>
+            <div class="stat">
+              <div class="stat-num">∞</div>
+              <div class="stat-label">Problemas</div>
+            </div>
+            <div class="stat">
+              <div class="stat-num">3</div>
+              <div class="stat-label">Niveles</div>
+            </div>
+            <div class="stat">
+              <div class="stat-num">100%</div>
+              <div class="stat-label">Gratis</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Topics -->
+      <section class="section" id="topics">
+        <div class="section-inner">
+          <div class="section-head">
+            <span class="section-eyebrow">// TEMAS DISPONIBLES</span>
+            <h2 class="section-title">Todo lo que necesitas, <span class="accent">en un lugar</span>.</h2>
+          </div>
+
+          <div class="topics-preview">
+            <div class="topic-preview">
+              <div class="tp-icon">TEMA.01</div>
+              <h4>Aritmética</h4>
+              <p>Suma, resta, multiplicación y división con jerarquía de operaciones.</p>
+            </div>
+            <div class="topic-preview">
+              <div class="tp-icon">TEMA.02</div>
+              <h4>Fracciones</h4>
+              <p>Operaciones completas incluyendo denominador común y simplificación.</p>
+            </div>
+            <div class="topic-preview">
+              <div class="tp-icon">TEMA.03</div>
+              <h4>Porcentajes</h4>
+              <p>Cálculo de porcentajes con conversión decimal paso a paso.</p>
+            </div>
+            <div class="topic-preview">
+              <div class="tp-icon">TEMA.04</div>
+              <h4>Álgebra</h4>
+              <p>Ecuaciones lineales con una incógnita, despeje y verificación.</p>
+            </div>
+            <div class="topic-preview">
+              <div class="tp-icon">TEMA.05</div>
+              <h4>Potencias</h4>
+              <p>Bases y exponentes con expansión completa de la multiplicación.</p>
+            </div>
+            <div class="topic-preview">
+              <div class="tp-icon">TEMA.06</div>
+              <h4>Raíces</h4>
+              <p>Raíces cuadradas exactas y aproximadas con análisis entre cuadrados perfectos.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="site-footer">
+        <div class="footer-grid">
+          <div class="footer-brand-col">
+            <a href="#" class="site-brand">
+              <span class="brand-dot"></span>
+              <span class="brand-name">Math<span>Mentor</span></span>
+            </a>
+            <p>Una calculadora inteligente que explica el cómo y el porqué. Hecha para estudiantes de 10 a 15 años.</p>
+          </div>
+          <div class="footer-col">
+            <h5>Producto</h5>
+            <ul>
+              <li><a href="#features">Cómo funciona</a></li>
+              <li><a href="#topics">Temas</a></li>
+              <li><a href="#stats">Resultados</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h5>Recursos</h5>
+            <ul>
+              <li><a href="#">Guía de uso</a></li>
+              <li><a href="#">Para profesores</a></li>
+              <li><a href="#">Para padres</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h5>Empresa</h5>
+            <ul>
+              <li><a href="#">Acerca de</a></li>
+              <li><a href="#">Privacidad</a></li>
+              <li><a href="#">Contacto</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="footer-bottom">
+          <div>© 2026 MathMentor · v1.0.0</div>
+          <div class="footer-status">
+            <span class="status-dot"></span>
+            Todos los sistemas operativos
+          </div>
+        </div>
+      </footer>
+
+    </template>
+
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="data.js?v=13"></script>
+  <script src="scripts.js?v=13"></script>
+</body>
+</html>
