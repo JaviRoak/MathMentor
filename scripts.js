@@ -111,6 +111,7 @@ createApp({
 
       const steps = [];
       let workingTokens = [...tokens];
+      const hadPriorityOps = tokens.some(token => token === '×' || token === '*' || token === '/' || token === '÷');
 
       // Primero multiplicaciones y divisiones
       let found = true;
@@ -168,8 +169,12 @@ createApp({
             steps.push({
               operation: `<span class="highlight">${a} ${op} ${b} = ${formatNum(res)}</span>`,
               explanation: op === '+'
-                ? `Ya no quedan multiplicaciones ni divisiones antes de esta parte, así que avanzamos de izquierda a derecha. Sumamos ${a} + ${b}: empezamos en ${a}, agregamos ${b} y llegamos a ${formatNum(res)}.`
-                : `Ya no quedan multiplicaciones ni divisiones antes de esta parte, así que avanzamos de izquierda a derecha. Restamos ${a} - ${b}: empezamos en ${a}, quitamos ${b} y llegamos a ${formatNum(res)}.`,
+                ? hadPriorityOps
+                  ? `Después de resolver las multiplicaciones o divisiones, seguimos con la suma. Sumamos ${a} + ${b}: empezamos en ${a}, agregamos ${b} y llegamos a ${formatNum(res)}.`
+                  : `Esta es una suma directa. Sumamos ${a} + ${b}: empezamos en ${a}, agregamos ${b} y llegamos a ${formatNum(res)}.`
+                : hadPriorityOps
+                  ? `Después de resolver las multiplicaciones o divisiones, seguimos con la resta. Restamos ${a} - ${b}: empezamos en ${a}, quitamos ${b} y llegamos a ${formatNum(res)}.`
+                  : `Esta es una resta directa. Restamos ${a} - ${b}: empezamos en ${a}, quitamos ${b} y llegamos a ${formatNum(res)}.`,
               visible: true,
             });
 
