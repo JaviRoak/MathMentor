@@ -1,6 +1,7 @@
 /* Datos de temas, niveles, teclas y retos */
 
 window.MathMentorData = (() => {
+  // Textos breves usados en la portada.
   const features = [
     { icon: '📖', text: 'Paso a paso' },
     { icon: '🎯', text: 'Desafíos' },
@@ -8,12 +9,14 @@ window.MathMentorData = (() => {
     { icon: '🎮', text: 'Para 10-15 años' },
   ];
 
+  // Rangos de edad disponibles en el inicio.
   const ageRanges = [
     { value: '10-11', label: '10-11 años' },
     { value: '12-13', label: '12-13 años' },
     { value: '14-15', label: '14-15 años' },
   ];
 
+  // Configuración base de cada tema.
   const topicsConfig = {
     arithmetic: {
       id: 'arithmetic',
@@ -65,6 +68,7 @@ window.MathMentorData = (() => {
     },
   };
 
+  // Teclas de la calculadora rápida del estado vacío.
   const calculatorKeys = [
     ['7', '8', '9', '+'],
     ['4', '5', '6', '-'],
@@ -74,6 +78,7 @@ window.MathMentorData = (() => {
     ['x', '(', ')', '⌫'],
   ];
 
+  // Retos cortos que aparecen después de resolver un ejercicio.
   const quickChallenges = {
     arithmetic: [
       { question: '¿Cuánto es 15 × 4 + 10?', answer: '70' },
@@ -114,6 +119,7 @@ window.MathMentorData = (() => {
     ],
   };
 
+  // Banco principal del modo reto, con feedback por respuesta.
   const challengeSets = {
     arithmetic: [
       {
@@ -274,15 +280,18 @@ window.MathMentorData = (() => {
     ],
   };
 
+  // Devuelve un reto corto aleatorio del tema actual.
   function generateChallenge(topic) {
     const pool = quickChallenges[topic] || quickChallenges.arithmetic;
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
+  // Devuelve la lista completa de ejercicios para el modo reto.
   function generateChallengeSet(topic) {
     return challengeSets[topic] || challengeSets.arithmetic;
   }
 
+  // Expone los datos para que scripts.js los use.
   return {
     features,
     ageRanges,
