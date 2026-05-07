@@ -687,6 +687,7 @@ createApp({
       return autoCloseParentheses(expr.trim());
     }
 
+    // Detecta el motor correcto aunque el usuario escriba algo de otro tema.
     function detectTopic(expr, fallbackTopic) {
       const normalized = expr.toLowerCase();
 
@@ -708,7 +709,7 @@ createApp({
       challengeAnswered.value = false;
       challengeAnswer.value = '';
 
-      // Pausa breve para mostrar carga
+      // Mantiene el cambio visual de "cargando" antes de mostrar el resultado.
       setTimeout(() => {
         try {
           let res;
@@ -797,6 +798,8 @@ createApp({
     function startChallenge() {
       const topic = result.value?.topic || selectedTopic.value;
       resetChallenge();
+
+      // Reinicia el reto usando el tema actual y deja lista la pizarra.
       challengeState.value = {
         ...challengeState.value,
         mode: 'active',
@@ -843,8 +846,10 @@ createApp({
       const normalized = normalizeAnswer(answer);
       const accepted = [exercise.answer, ...(exercise.accepted || [])].map(normalizeAnswer);
 
+      // Primero acepta variantes textuales definidas para cada ejercicio.
       if (accepted.includes(normalized)) return true;
 
+      // Luego compara números para tolerar pequeñas diferencias de formato.
       const numericAnswer = Number(normalized);
       const numericCorrect = Number(normalizeAnswer(exercise.answer));
       return Number.isFinite(numericAnswer) &&
@@ -893,6 +898,7 @@ createApp({
         challengeTimer = null;
       }
 
+      // Guarda tiempo y mejor marca solo si el reto quedó completo.
       const elapsed = challengeState.value.startedAt
         ? Math.max(1, Math.round((Date.now() - challengeState.value.startedAt) / 1000))
         : 120 - challengeState.value.timeLeft;
@@ -946,6 +952,7 @@ createApp({
       const panel = event.currentTarget.closest('.challenge-calc-panel');
       if (!panel) return;
 
+      // Mueve la calculadora sin dejar que salga de la ventana visible.
       const rect = panel.getBoundingClientRect();
       const offsetX = event.clientX - rect.left;
       const offsetY = event.clientY - rect.top;
@@ -993,6 +1000,7 @@ createApp({
       const ctx = prepareChallengeCanvas();
       if (!canvas || !ctx) return;
 
+      // Redibuja la pizarra desde cero para que siempre arranque limpia.
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#080910';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
