@@ -1,291 +1,309 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MathMentor — Calculadora</title>
-  <link rel="stylesheet" href="styles.css?v=13" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-</head>
-<body data-page="app">
-  <div id="app">
-    <section class="main-app" :class="{ 'challenge-active': result && challengeState.mode !== 'idle' }" v-if="currentView === 'app'">
-      <header class="app-header">
-        <div class="header-left">
-          <button class="back-btn" @click="goHome" title="Volver al inicio">
-            ← <span class="back-text">Inicio</span>
-          </button>
-          <div class="header-brand">
-            <div class="brand-mini"></div>
-            <span class="header-name">Math<span>Mentor</span></span>
-          </div>
+<!-- Contenedor principal de la app -->
+<div id="app">
+
+  <!-- Sección principal, solo aparece si la vista actual es "app" -->
+  <section 
+    class="main-app" 
+    :class="{ 'challenge-active': result && challengeState.mode !== 'idle' }" 
+    v-if="currentView === 'app'"
+  >
+
+    <!-- Encabezado -->
+    <header class="app-header">
+
+      <!-- Lado izquierdo -->
+      <div class="header-left">
+
+        <!-- Botón para volver al inicio -->
+        <button class="back-btn" @click="goHome" title="Volver al inicio">
+          ← <span class="back-text">Inicio</span>
+        </button>
+
+        <!-- Logo y nombre -->
+        <div class="header-brand">
+          <div class="brand-mini"></div>
+          <span class="header-name">Math<span>Mentor</span></span>
         </div>
-        <div class="header-right">
-          <div class="streak-badge" v-if="streak > 0">
-            RACHA · {{ streak }}
-          </div>
-          <div class="level-badge">
-            {{ ageLevelLabel }}
-          </div>
-        </div>
-      </header>
-
-      <div class="app-body">
-        <aside class="topics-sidebar">
-          <h3 class="sidebar-title">// TEMAS</h3>
-          <button
-            v-for="topic in availableTopics"
-            :key="topic.id"
-            :class="['topic-btn', { active: selectedTopic === topic.id }]"
-            @click="selectTopic(topic.id)"
-          >
-            <span class="topic-icon">{{ topic.icon }}</span>
-            <span class="topic-name">{{ topic.name }}</span>
-          </button>
-        </aside>
-
-        <main class="workspace">
-          <div class="input-zone">
-            <div class="input-header">
-              <span class="input-topic-icon">{{ currentTopicData.icon }}</span>
-              <h2 class="input-title">{{ currentTopicData.name }}</h2>
-            </div>
-            <p class="input-hint">{{ currentTopicData.hint }}</p>
-
-            <div class="expression-input-wrap">
-              <input
-                type="text"
-                class="expression-input"
-                v-model="expression"
-                :placeholder="currentTopicData.placeholder"
-                @keyup.enter="solve"
-                ref="mainInput"
-                spellcheck="false"
-                autocomplete="off"
-              />
-              <button class="solve-btn" @click="solve" :disabled="!expression.trim() || isLoading">
-                <span v-if="!isLoading">Resolver →</span>
-                <span v-else class="loading-dots"><span>.</span><span>.</span><span>.</span></span>
-              </button>
-            </div>
-
-            <div class="quick-examples">
-              <span class="examples-label">// ejemplos</span>
-              <button
-                v-for="(ex, i) in currentTopicData.examples"
-                :key="i"
-                class="example-btn"
-                @click="expression = ex; solve()"
-              >{{ ex }}</button>
-            </div>
-          </div>
-
-          <div class="result-zone" v-if="result">
-            <div class="result-card">
-              <div class="result-header">
-                <h3 class="result-title">// RESULTADO</h3>
-                <div class="result-value">{{ result.answer }}</div>
-              </div>
-
-              <div class="steps-section">
-                <h4 class="steps-title">// PASO A PASO</h4>
-                <div class="steps-list">
-                  <div
-                    v-for="(step, i) in result.steps"
-                    :key="i"
-                    class="step-card"
-                    :style="{ animationDelay: (i * 0.08) + 's' }"
-                  >
-                    <div class="step-number">{{ String(i + 1).padStart(2, '0') }}</div>
-                    <div class="step-content">
-                      <div class="step-operation" v-html="step.operation"></div>
-                      <p class="step-explain">{{ step.explanation }}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="concept-box" v-if="result.concept">
-                <div class="concept-icon">NOTA</div>
-                <div class="concept-content">
-                  <h4 class="concept-title">Concepto clave</h4>
-                  <p class="concept-text">{{ result.concept }}</p>
-                </div>
-              </div>
-
-              <div class="challenge-box" :class="{ 'challenge-fullscreen': challengeState.mode === 'active' }" v-if="result.challenge">
-                <template v-if="challengeState.mode === 'idle'">
-                  <div class="challenge-header">
-                    <span class="challenge-icon">// MODO RETO</span>
-                    <h4 class="challenge-title">Tu turno.</h4>
-                  </div>
-                  <p class="challenge-text">
-                    Tienes 2 minutos para resolver ejercicios progresivos. Pon a prueba tu lógica, mejora tu precisión y recibe feedback en cada respuesta.
-                  </p>
-                  <div class="challenge-meta">
-                    <span>⏱ 2 minutos</span>
-                    <span>3-5 ejercicios</span>
-                    <span>Dificultad progresiva</span>
-                  </div>
-                  <button class="challenge-start-btn" type="button" @click="startChallenge">Aceptar reto →</button>
-                </template>
-
-                <template v-else-if="challengeState.mode === 'active'">
-                  <div class="challenge-arena" :class="{ 'no-calculator': !showChallengeCalculator }">
-                    <header class="challenge-arena-header">
-                      <div>
-                        <span class="challenge-icon">// MODO RETO</span>
-                        <h4 class="challenge-title">Ejercicio {{ challengeProgressLabel }}</h4>
-                      </div>
-                      <div class="challenge-arena-stats">
-                        <span>🔥 Racha: {{ challengeState.streak }}</span>
-                        <span>✔ {{ challengeState.correctCount }}/{{ challengeState.exercises.length }}</span>
-                        <div class="challenge-clock">{{ challengeTimeLabel }}</div>
-                        <button class="challenge-surrender-btn" type="button" @click="surrenderChallenge">Rendirse</button>
-                      </div>
-                    </header>
-
-                    <section class="challenge-problem-panel">
-                      <p class="challenge-text challenge-question">{{ currentChallengeExercise.question }}</p>
-
-                      <div class="challenge-input-wrap">
-                        <input
-                          type="text"
-                          class="challenge-input"
-                          v-model="challengeState.answer"
-                          placeholder="Tu respuesta..."
-                          @keyup.enter="submitChallengeAnswer"
-                        />
-                        <button class="challenge-submit" @click="submitChallengeAnswer" :disabled="!!challengeState.feedback">Verificar</button>
-                      </div>
-
-                      <div class="challenge-feedback" v-if="challengeState.feedback" :class="challengeState.feedback.correct ? 'correct' : 'incorrect'">
-                        <span class="feedback-icon">{{ challengeState.feedback.correct ? '✓ OK' : '✕ NO' }}</span>
-                        <span>{{ challengeState.feedback.text }}</span>
-                      </div>
-
-                      <button class="challenge-next-btn" v-if="challengeState.feedback" type="button" @click="nextChallengeExercise">
-                        {{ challengeState.currentIndex >= challengeState.exercises.length - 1 ? 'Finalizar reto' : 'Siguiente ejercicio →' }}
-                      </button>
-                    </section>
-
-                    <section class="challenge-board-panel">
-                      <div class="challenge-board-head">
-                        <span>Pizarra</span>
-                        <button class="challenge-tool-btn" type="button" @click="clearChallengeBoard">Limpiar</button>
-                      </div>
-                      <canvas
-                        ref="challengeCanvas"
-                        class="challenge-draw-board"
-                        width="1100"
-                        height="700"
-                        @pointerdown="startChallengeDrawing"
-                        @pointermove="drawChallengeLine"
-                        @pointerup="stopChallengeDrawing"
-                        @pointerleave="stopChallengeDrawing"
-                      ></canvas>
-                    </section>
-
-                    <aside
-                      class="challenge-calc-panel"
-                      v-if="showChallengeCalculator"
-                      :style="challengeCalcStyle()"
-                    >
-                      <div class="challenge-calc-title" @pointerdown="startChallengeCalcDrag">Calculadora básica</div>
-                      <div class="challenge-calc-display">{{ challengeState.calcDisplay || '0' }}</div>
-                      <div class="challenge-mini-calc">
-                        <button
-                          v-for="key in ['7','8','9','+','4','5','6','-','1','2','3','×','0','⌫','=','÷']"
-                          :key="key"
-                          type="button"
-                          class="challenge-calc-key"
-                          :class="{ operator: ['+', '-', '×', '÷', '='].includes(key), danger: key === '⌫' }"
-                          @click="insertChallengeCalcKey(key)"
-                        >{{ key }}</button>
-                      </div>
-                    </aside>
-                  </div>
-                </template>
-
-                <template v-else>
-                  <div class="challenge-header">
-                    <span class="challenge-icon">// RETO TERMINADO</span>
-                    <h4 class="challenge-title">Resultado</h4>
-                  </div>
-                  <div class="challenge-summary">
-                    <div>
-                      <strong>{{ challengeState.correctCount }}/{{ challengeState.exercises.length }}</strong>
-                      <span>Correctas</span>
-                    </div>
-                    <div>
-                      <strong>{{ challengeState.bestTime ? challengeState.bestTime + 's' : '—' }}</strong>
-                      <span>Mejor tiempo</span>
-                    </div>
-                  </div>
-                  <p class="challenge-text" v-if="challengeState.lastImprovement">
-                    📈 Mejoraste tu tiempo en {{ challengeState.lastImprovement }} segundos.
-                  </p>
-                  <p class="challenge-text" v-else>
-                    {{ challengeState.surrendered ? 'Te rendiste esta vez. Puedes intentarlo de nuevo cuando estés listo.' : (challengeState.correctCount === challengeState.exercises.length ? 'Excelente precisión. Intenta repetirlo más rápido.' : 'Buen intento. Revisa los errores y vuelve a intentarlo.') }}
-                  </p>
-                  <button class="challenge-start-btn" type="button" @click="startChallenge">Reintentar reto →</button>
-                </template>
-              </div>
-
-              <button class="new-problem-btn" @click="resetProblem">
-                ↻ Nuevo problema
-              </button>
-            </div>
-          </div>
-
-          <div class="empty-state" v-if="!result && !isLoading">
-            <div class="mini-calculator" aria-label="Calculadora rápida">
-              <div class="mini-calculator-screen">{{ expression || '0' }}</div>
-              <div class="mini-calculator-keys">
-                <template v-for="(row, rowIndex) in calculatorKeys" :key="rowIndex">
-                  <button
-                    v-for="key in row"
-                    :key="rowIndex + '-' + key"
-                    class="mini-calc-key"
-                    :class="{ operator: ['+', '-', '×', '÷', '=', '^', '%', 'de', '√'].includes(key), danger: key === '⌫' }"
-                    type="button"
-                    @click="insertCalculatorKey(key)"
-                  >{{ key }}</button>
-                </template>
-              </div>
-            </div>
-            <p class="empty-text">Toca los números y signos necesarios, o escribe la operación arriba.</p>
-          </div>
-
-          <div class="history-section" v-if="history.length > 0 && !result">
-            <h3 class="history-title">// HISTORIAL</h3>
-            <div class="history-list">
-              <button
-                v-for="(h, i) in history.slice(0, 5)"
-                :key="i"
-                class="history-item"
-                @click="expression = h.expression; solve()"
-              >
-                <span class="history-expr">{{ h.expression }}</span>
-                <span class="history-answer">= {{ h.answer }}</span>
-              </button>
-            </div>
-          </div>
-        </main>
       </div>
-    </section>
 
-    <div class="error-toast" v-if="errorMsg" @click="errorMsg = ''">
-      <span class="error-icon">ERR</span>
-      <span>{{ errorMsg }}</span>
-      <span class="error-close">✕</span>
+      <!-- Lado derecho -->
+      <div class="header-right">
+
+        <!-- Muestra la racha solo si es mayor a 0 -->
+        <div class="streak-badge" v-if="streak > 0">
+          RACHA · {{ streak }}
+        </div>
+
+        <!-- Nivel actual -->
+        <div class="level-badge">
+          {{ ageLevelLabel }}
+        </div>
+      </div>
+    </header>
+
+    <div class="app-body">
+
+      <!-- Barra lateral de temas -->
+      <aside class="topics-sidebar">
+
+        <h3 class="sidebar-title">// TEMAS</h3>
+
+        <!-- Botones generados dinámicamente -->
+        <button
+          v-for="topic in availableTopics"
+          :key="topic.id"
+          :class="['topic-btn', { active: selectedTopic === topic.id }]"
+          @click="selectTopic(topic.id)"
+        >
+
+          <span class="topic-icon">{{ topic.icon }}</span>
+          <span class="topic-name">{{ topic.name }}</span>
+        </button>
+      </aside>
+
+      <main class="workspace">
+
+        <!-- Zona de entrada -->
+        <div class="input-zone">
+
+          <!-- Información del tema actual -->
+          <div class="input-header">
+            <span class="input-topic-icon">{{ currentTopicData.icon }}</span>
+            <h2 class="input-title">{{ currentTopicData.name }}</h2>
+          </div>
+
+          <!-- Descripción o ayuda -->
+          <p class="input-hint">{{ currentTopicData.hint }}</p>
+
+          <!-- Área de escritura -->
+          <div class="expression-input-wrap">
+
+            <input
+              type="text"
+              class="expression-input"
+              v-model="expression"
+              :placeholder="currentTopicData.placeholder"
+              @keyup.enter="solve"
+              ref="mainInput"
+              spellcheck="false"
+              autocomplete="off"
+            />
+
+            <!-- Botón para resolver -->
+            <button 
+              class="solve-btn" 
+              @click="solve" 
+              :disabled="!expression.trim() || isLoading"
+            >
+
+              <!-- Estado normal -->
+              <span v-if="!isLoading">Resolver →</span>
+
+              <!-- Animación de carga -->
+              <span v-else class="loading-dots">
+                <span>.</span><span>.</span><span>.</span>
+              </span>
+            </button>
+          </div>
+
+          <!-- Ejemplos rápidos -->
+          <div class="quick-examples">
+
+            <span class="examples-label">// ejemplos</span>
+
+            <!-- Botones con ejercicios de ejemplo -->
+            <button
+              v-for="(ex, i) in currentTopicData.examples"
+              :key="i"
+              class="example-btn"
+              @click="expression = ex; solve()"
+            >
+              {{ ex }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Zona de resultados -->
+        <div class="result-zone" v-if="result">
+
+          <div class="result-card">
+
+            <!-- Resultado principal -->
+            <div class="result-header">
+              <h3 class="result-title">// RESULTADO</h3>
+              <div class="result-value">{{ result.answer }}</div>
+            </div>
+
+            <!-- Explicación paso a paso -->
+            <div class="steps-section">
+
+              <h4 class="steps-title">// PASO A PASO</h4>
+
+              <div class="steps-list">
+
+                <!-- Tarjetas dinámicas de pasos -->
+                <div
+                  v-for="(step, i) in result.steps"
+                  :key="i"
+                  class="step-card"
+                  :style="{ animationDelay: (i * 0.08) + 's' }"
+                >
+
+                  <!-- Número del paso -->
+                  <div class="step-number">
+                    {{ String(i + 1).padStart(2, '0') }}
+                  </div>
+
+                  <div class="step-content">
+
+                    <!-- Operación matemática -->
+                    <div class="step-operation" v-html="step.operation"></div>
+
+                    <!-- Explicación -->
+                    <p class="step-explain">{{ step.explanation }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Concepto adicional -->
+            <div class="concept-box" v-if="result.concept">
+
+              <div class="concept-icon">NOTA</div>
+
+              <div class="concept-content">
+                <h4 class="concept-title">Concepto clave</h4>
+                <p class="concept-text">{{ result.concept }}</p>
+              </div>
+            </div>
+
+            <!-- Modo reto -->
+            <div 
+              class="challenge-box" 
+              :class="{ 'challenge-fullscreen': challengeState.mode === 'active' }" 
+              v-if="result.challenge"
+            >
+
+              <!-- Estado inicial del reto -->
+              <template v-if="challengeState.mode === 'idle'">
+
+                <div class="challenge-header">
+                  <span class="challenge-icon">// MODO RETO</span>
+                  <h4 class="challenge-title">Tu turno.</h4>
+                </div>
+
+                <p class="challenge-text">
+                  Tienes 2 minutos para resolver ejercicios progresivos.
+                </p>
+
+                <!-- Datos del reto -->
+                <div class="challenge-meta">
+                  <span>⏱ 2 minutos</span>
+                  <span>3-5 ejercicios</span>
+                  <span>Dificultad progresiva</span>
+                </div>
+
+                <!-- Iniciar reto -->
+                <button 
+                  class="challenge-start-btn" 
+                  type="button" 
+                  @click="startChallenge"
+                >
+                  Aceptar reto →
+                </button>
+              </template>
+
+              <!-- Estado activo del reto -->
+              <template v-else-if="challengeState.mode === 'active'">
+
+                <div 
+                  class="challenge-arena" 
+                  :class="{ 'no-calculator': !showChallengeCalculator }"
+                >
+
+                  <!-- Encabezado del reto -->
+                  <header class="challenge-arena-header">
+
+                    <div>
+                      <span class="challenge-icon">// MODO RETO</span>
+                      <h4 class="challenge-title">
+                        Ejercicio {{ challengeProgressLabel }}
+                      </h4>
+                    </div>
+
+                    <!-- Estadísticas -->
+                    <div class="challenge-arena-stats">
+                      <span>🔥 Racha: {{ challengeState.streak }}</span>
+                      <span>✔ {{ challengeState.correctCount }}/{{ challengeState.exercises.length }}</span>
+
+                      <!-- Temporizador -->
+                      <div class="challenge-clock">
+                        {{ challengeTimeLabel }}
+                      </div>
+
+                      <!-- Rendirse -->
+                      <button 
+                        class="challenge-surrender-btn" 
+                        type="button" 
+                        @click="surrenderChallenge"
+                      >
+                        Rendirse
+                      </button>
+                    </div>
+                  </header>
+
+                  <!-- Pregunta del reto -->
+                  <section class="challenge-problem-panel">
+
+                    <p class="challenge-text challenge-question">
+                      {{ currentChallengeExercise.question }}
+                    </p>
+
+                    <!-- Campo de respuesta -->
+                    <div class="challenge-input-wrap">
+
+                      <input
+                        type="text"
+                        class="challenge-input"
+                        v-model="challengeState.answer"
+                        placeholder="Tu respuesta..."
+                        @keyup.enter="submitChallengeAnswer"
+                      />
+
+                      <button
+                        class="challenge-submit"
+                        @click="submitChallengeAnswer"
+                        :disabled="!!challengeState.feedback"
+                      >
+                        Verificar
+                      </button>
+                    </div>
+
+                    <!-- Resultado de la respuesta -->
+                    <div
+                      class="challenge-feedback"
+                      v-if="challengeState.feedback"
+                      :class="challengeState.feedback.correct ? 'correct' : 'incorrect'"
+                    >
+
+                      <span class="feedback-icon">
+                        {{ challengeState.feedback.correct ? '✓ OK' : '✕ NO' }}
+                      </span>
+
+                      <span>{{ challengeState.feedback.text }}</span>
+                    </div>
+                  </section>
+                </div>
+              </template>
+            </div>
+
+            <!-- Reiniciar ejercicio -->
+            <button class="new-problem-btn" @click="resetProblem">
+              ↻ Nuevo problema
+            </button>
+          </div>
+        </div>
+      </main>
     </div>
-  </div>
-
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <script src="data.js?v=13"></script>
-  <script src="scripts.js?v=13"></script>
-</body>
-</html>
+  </section>
+</div>
