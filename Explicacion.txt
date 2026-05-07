@@ -1,0 +1,11 @@
+El proyecto es una calculadora educativa interactiva enfocada en ayudar a estudiantes de 10 a 15 años a entender matemáticas, no solo a obtener respuestas. Está desarrollada con HTML, CSS, JavaScript y Vue.
+
+La idea principal del proyecto es que el usuario pueda escribir una operación matemática y el sistema no solo devuelva el resultado, sino también una explicación paso a paso y un concepto clave. Esto hace que la aplicación sea más pedagógica que una calculadora tradicional.
+
+A nivel de estructura, organicé el proyecto en varios archivos para que fuera más claro y mantenible. index.html contiene la pantalla de inicio, donde el usuario elige su nivel. app.html contiene la calculadora y el modo reto. styles.css controla todo el diseño visual. data.js guarda la información fija, como los temas, ejemplos, niveles y bancos de retos. Finalmente, scripts.js contiene la lógica principal de la aplicación.
+
+En la parte de funcionamiento, cuando el usuario escribe una expresión, el sistema primero normaliza la entrada y detecta automáticamente qué tipo de operación es. Por ejemplo, reconoce si es una raíz, un porcentaje, una potencia, una ecuación, una fracción o una operación aritmética. Después llama al motor matemático correspondiente. Cada motor resuelve el problema y construye una respuesta estructurada con tres partes: resultado, pasos y explicación conceptual.
+
+Otra parte importante del proyecto es el modo reto. Este modo permite practicar con tiempo limitado y ejercicios progresivos. El usuario recibe feedback después de cada respuesta, no solo si está bien o mal, sino también una breve explicación del error o del procedimiento correcto. Además, incluí una pizarra en canvas para escribir o dibujar procedimientos, y una calculadora básica limitada que se puede mover en pantalla, pero que no aparece en aritmética para no romper la dificultad del reto.
+
+También mejoré la organización general del proyecto. Antes todo estaba en un solo HTML, pero luego separé la pantalla de inicio y la aplicación principal. Esto hace que el código sea más claro y más fácil de explicar. En resumen, mi proyecto busca unir interfaz, lógica matemática y experiencia de aprendizaje en una sola herramienta.
