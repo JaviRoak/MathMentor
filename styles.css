@@ -1066,9 +1066,9 @@ body {
 /* Panel de progreso del estudiante. */
 .profile-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(380px, auto);
   gap: 22px;
-  align-items: center;
+  align-items: start;
   margin-bottom: 24px;
   padding: 22px;
   background: var(--bg-card);
@@ -1112,8 +1112,14 @@ body {
 
 .profile-stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(86px, 1fr));
+  grid-template-columns: repeat(3, minmax(86px, 1fr));
   gap: 8px;
+}
+
+.profile-side {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
 }
 
 .profile-stat {
@@ -1123,6 +1129,8 @@ body {
   border-radius: var(--radius-sm);
   background: var(--bg);
 }
+
+.profile-streak-hidden { display: none; }
 
 .profile-stat strong {
   display: block;
@@ -1143,6 +1151,152 @@ body {
   font-size: 0.66rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.profile-history-btn {
+  padding: 10px 16px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--blue-soft);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.profile-history-btn:hover:not(:disabled) {
+  border-color: var(--blue);
+  background: var(--bg-elev);
+  color: var(--text);
+}
+
+.profile-history-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Ventana del historial. */
+.history-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(3, 5, 10, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.history-modal {
+  width: min(720px, 100%);
+  max-height: min(720px, 86vh);
+  overflow: auto;
+  padding: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.45);
+  animation: popIn 0.22s var(--ease);
+}
+
+.recent-history-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.recent-history-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.recent-history-count {
+  padding: 6px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.history-close-btn {
+  padding: 8px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font-main);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.history-close-btn:hover {
+  border-color: var(--red);
+  color: var(--red-soft);
+}
+
+.recent-history-list {
+  display: grid;
+  gap: 8px;
+}
+
+.recent-history-item {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.recent-history-item:hover {
+  border-color: var(--blue);
+  background: var(--bg-elev);
+}
+
+.recent-history-topic {
+  color: var(--text-mute);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.recent-history-expr,
+.recent-history-answer {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+}
+
+.recent-history-answer {
+  color: var(--blue);
+  font-weight: 700;
+}
+
+.history-empty-text {
+  padding: 18px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  text-align: center;
 }
 
 /* Entrada */
@@ -2025,38 +2179,6 @@ body {
   font-size: 0.85rem;
 }
 
-/* Historial */
-.history-section { margin-top: 28px; }
-
-.history-title {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: var(--text-mute);
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-}
-
-.history-list { display: flex; flex-direction: column; gap: 6px; }
-
-.history-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--bg-card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: 0.88rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: left;
-}
-.history-item:hover { border-color: var(--blue); background: var(--bg-elev); }
-.history-expr { color: var(--text); }
-.history-answer { color: var(--blue); font-weight: 600; }
-
 /* Mensaje de error */
 .error-toast {
   position: fixed;
@@ -2121,7 +2243,10 @@ body {
   }
   .header-right { flex-wrap: wrap; }
   .profile-panel { grid-template-columns: 1fr; }
+  .profile-side { width: 100%; }
   .profile-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .recent-history-item { grid-template-columns: 1fr; }
+  .recent-history-answer { white-space: normal; }
   .site-nav { gap: 20px; }
   .hero { padding: 60px 20px 80px; }
   .section { padding: 70px 20px; }
@@ -2155,6 +2280,7 @@ body {
   .result-header { flex-direction: column; align-items: flex-start; }
   .result-value { font-size: 1.4rem; }
   .back-text { display: none; }
+  .recent-history-head { flex-direction: column; }
   .age-buttons { flex-wrap: wrap; }
   .student-login-input { text-align: left; }
   .site-nav a:not(.nav-cta) { display: none; }
