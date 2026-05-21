@@ -20,6 +20,7 @@ createApp({
     const result = ref(null);
     const isLoading = ref(false);
     const errorMsg = ref('');
+    const isHistoryOpen = ref(false);
     const streak = ref(0);
     const history = ref([]);
     const challengeAnswer = ref('');
@@ -1346,6 +1347,12 @@ createApp({
       });
     }
 
+    function replayHistoryItem(item) {
+      isHistoryOpen.value = false;
+      expression.value = item.expression;
+      solve();
+    }
+
     async function logoutProfile() {
       resetChallenge();
       if (firebaseAuth && currentStudent.value?.provider === 'google') {
@@ -1373,6 +1380,7 @@ createApp({
       result,
       isLoading,
       errorMsg,
+      isHistoryOpen,
       streak,
       history,
       challengeAnswer,
@@ -1422,6 +1430,7 @@ createApp({
       stopChallengeDrawing,
       checkChallenge,
       resetProblem,
+      replayHistoryItem,
       logoutProfile,
     };
   },

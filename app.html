@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MathMentor — Calculadora</title>
-  <link rel="stylesheet" href="styles.css?v=17" />
+  <link rel="stylesheet" href="styles.css?v=22" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -29,7 +29,7 @@
             <span class="student-avatar" v-else>{{ studentInitials }}</span>
             <span class="student-badge-name">{{ currentStudent.name }}</span>
           </div>
-          <div class="streak-badge" v-if="streak > 0">
+          <div class="streak-badge" v-if="false">
             RACHA · {{ streak }}
           </div>
           <div class="level-badge">
@@ -61,23 +61,28 @@
               <h1 class="profile-title">Hola, {{ currentStudent.name }}</h1>
               <p class="profile-text">Tu avance queda guardado en este dispositivo{{ currentStudent.provider === 'google' ? ' con tu cuenta de Google.' : ' para continuar practicando despues.' }}</p>
             </div>
-            <div class="profile-stats">
-              <div class="profile-stat">
-                <strong>{{ currentStudent.solvedCount || 0 }}</strong>
-                <span>Ejercicios</span>
+            <div class="profile-side">
+              <div class="profile-stats">
+                <div class="profile-stat">
+                  <strong>{{ currentStudent.solvedCount || 0 }}</strong>
+                  <span>Ejercicios</span>
+                </div>
+                <div class="profile-stat profile-streak-hidden">
+                  <strong>{{ streak }}</strong>
+                  <span>Racha</span>
+                </div>
+                <div class="profile-stat">
+                  <strong>{{ bestTopicLabel }}</strong>
+                  <span>Mejor tema</span>
+                </div>
+                <div class="profile-stat">
+                  <strong>{{ bestChallengeLabel }}</strong>
+                  <span>Mejor reto</span>
+                </div>
               </div>
-              <div class="profile-stat">
-                <strong>{{ streak }}</strong>
-                <span>Racha</span>
-              </div>
-              <div class="profile-stat">
-                <strong>{{ bestTopicLabel }}</strong>
-                <span>Mejor tema</span>
-              </div>
-              <div class="profile-stat">
-                <strong>{{ bestChallengeLabel }}</strong>
-                <span>Mejor reto</span>
-              </div>
+              <button class="profile-history-btn" type="button" @click="isHistoryOpen = true" :disabled="history.length === 0">
+                Historial
+              </button>
             </div>
           </section>
 
@@ -294,20 +299,6 @@
             <p class="empty-text">Toca los números y signos necesarios, o escribe la operación arriba.</p>
           </div>
 
-          <div class="history-section" v-if="history.length > 0 && !result">
-            <h3 class="history-title">// HISTORIAL</h3>
-            <div class="history-list">
-              <button
-                v-for="(h, i) in history.slice(0, 5)"
-                :key="i"
-                class="history-item"
-                @click="expression = h.expression; solve()"
-              >
-                <span class="history-expr">{{ h.expression }}</span>
-                <span class="history-answer">= {{ h.answer }}</span>
-              </button>
-            </div>
-          </div>
         </main>
       </div>
     </section>
@@ -317,6 +308,31 @@
       <span>{{ errorMsg }}</span>
       <span class="error-close">✕</span>
     </div>
+
+    <div class="history-modal-backdrop" v-if="isHistoryOpen" @click.self="isHistoryOpen = false">
+      <section class="history-modal" role="dialog" aria-modal="true" aria-labelledby="history-title">
+        <div class="recent-history-head">
+          <div>
+            <span class="profile-kicker">// HISTORIAL RECIENTE</span>
+            <h2 class="recent-history-title" id="history-title">Ultimos ejercicios</h2>
+          </div>
+          <button class="history-close-btn" type="button" @click="isHistoryOpen = false">Cerrar</button>
+        </div>
+        <div class="recent-history-list" v-if="history.length > 0">
+          <button
+            v-for="(h, i) in history.slice(0, 10)"
+            :key="i"
+            class="recent-history-item"
+            @click="replayHistoryItem(h)"
+          >
+            <span class="recent-history-topic">{{ topicsConfig[h.topic]?.name || 'Ejercicio' }}</span>
+            <span class="recent-history-expr">{{ h.expression }}</span>
+            <span class="recent-history-answer">= {{ h.answer }}</span>
+          </button>
+        </div>
+        <p class="history-empty-text" v-else>Todavia no hay ejercicios guardados.</p>
+      </section>
+    </div>
   </div>
 
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
@@ -324,6 +340,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="firebase-config.js?v=2"></script>
   <script src="data.js?v=16"></script>
-  <script src="scripts.js?v=18"></script>
+  <script src="scripts.js?v=19"></script>
 </body>
 </html>
