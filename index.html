@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MathMentor — Calculadora Inteligente</title>
-  <link rel="stylesheet" href="styles.css?v=13" />
+  <link rel="stylesheet" href="styles.css?v=17" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -67,6 +67,7 @@
           </p>
 
           <div class="age-selector" id="start">
+            <!-- Nivel que define los temas disponibles. -->
             <p class="age-label">// Selecciona tu nivel</p>
             <div class="age-buttons">
               <button
@@ -76,10 +77,30 @@
                 @click="selectedAge = age.value"
               >{{ age.label }}</button>
             </div>
+
+            <!-- Login real con Google mediante Firebase. -->
+            <button class="google-login-btn" type="button" @click="signInWithGoogle" :disabled="!selectedAge || isAuthLoading">
+              <span class="google-mark">G</span>
+              <span>{{ isAuthLoading ? 'Conectando...' : 'Continuar con Google' }}</span>
+            </button>
+            <p class="auth-help" v-if="authMessage">{{ authMessage }}</p>
+
+            <!-- Respaldo local para probar sin cuenta de Google. -->
+            <label class="student-login-label" for="student-name">// O usa perfil local</label>
+            <input
+              id="student-name"
+              class="student-login-input"
+              type="text"
+              v-model="studentName"
+              placeholder="Escribe tu nombre"
+              maxlength="24"
+              autocomplete="name"
+              @keyup.enter="startApp"
+            />
           </div>
 
           <div class="cta-row">
-            <button class="cta-btn" @click="startApp" :disabled="!selectedAge">
+            <button class="cta-btn" @click="startApp" :disabled="!selectedAge || !studentName.trim()">
               <span>Iniciar sesión</span>
               <span class="cta-arrow">→</span>
             </button>
@@ -262,7 +283,10 @@
   </div>
 
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <script src="data.js?v=13"></script>
-  <script src="scripts.js?v=13"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="firebase-config.js?v=2"></script>
+  <script src="data.js?v=16"></script>
+  <script src="scripts.js?v=18"></script>
 </body>
 </html>
