@@ -5,9 +5,15 @@ const { createApp, ref, computed, nextTick, watch } = Vue;
 createApp({
   setup() {
     const page = document.body.dataset.page || 'home';
+    const USERS_KEY = 'mathmentor-users';
+    const CURRENT_USER_KEY = 'mathmentor-current-user';
 
     // Estado
     const currentView = ref(page);
+    const studentName = ref('');
+    const currentStudent = ref(null);
+    const authMessage = ref('');
+    const isAuthLoading = ref(false);
     const selectedAge = ref(page === 'app' ? (localStorage.getItem('mathmentor-age') || '10-11') : null);
     const selectedTopic = ref('arithmetic');
     const expression = ref('');
@@ -23,6 +29,10 @@ createApp({
     const challengeCanvas = ref(null);
     let challengeTimer = null;
     let isDrawingChallenge = false;
+    let firebaseAuth = null;
+    let googleProvider = null;
+
+    // Estado completo del reto activo.
     const challengeState = ref({
       mode: 'idle',
       exercises: [],
@@ -46,6 +56,132 @@ createApp({
       lastImprovement: null,
     });
 
+    // Perfiles guardados en el navegador.
+    function loadUsers() {
+      try {
+        return JSON.parse(localStorage.getItem(USERS_KEY)) || {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveUsers(users) {
+      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    }
+
+    function normalizeUserId(name) {
+      return name.trim().toLowerCase().replace(/\s+/g, '-');
+    }
+
+    function createStudent(name, age) {
+      return {
+        id: normalizeUserId(name),
+        name: name.trim(),
+        age,
+        provider: 'local',
+        email: '',
+        photoURL: '',
+        streak: 0,
+        solvedCount: 0,
+        history: [],
+        topicStats: {},
+        bestTimes: {},
+      };
+    }
+
+    // Evita iniciar Firebase si aun faltan datos del proyecto.
+    function firebaseConfigIsReady(config) {
+      return !!(
+        config &&
+        config.apiKey &&
+        config.authDomain &&
+        config.projectId &&
+        config.appId
+      );
+    }
+
+    // Prepara Firebase Auth cuando la configuracion ya existe.
+    function setupFirebaseAuth() {
+      const config = window.MathMentorFirebaseConfig;
+      if (!firebaseConfigIsReady(config)) return;
+      if (!window.firebase) {
+        authMessage.value = 'Firebase no cargo. Revisa tu conexion o los scripts de Firebase.';
+        return;
+      }
+
+      try {
+        if (!firebase.apps.length) firebase.initializeApp(config);
+        firebaseAuth = firebase.auth();
+        googleProvider = new firebase.auth.GoogleAuthProvider();
+        firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+      } catch (e) {
+        authMessage.value = 'No se pudo iniciar Firebase. Revisa firebase-config.js.';
+      }
+    }
+
+    // Convierte la cuenta de Google en un perfil de MathMentor.
+    function studentFromGoogleUser(user, age, existing = null) {
+      return {
+        history: [],
+        topicStats: {},
+        bestTimes: {},
+        ...existing,
+        id: `google:${user.uid}`,
+        name: user.displayName || user.email || 'Estudiante',
+        age,
+        provider: 'google',
+        email: user.email || '',
+        photoURL: user.photoURL || '',
+      };
+    }
+
+    // Mejor marca por tema para mostrarla al repetir retos.
+    function bestTimeForTopic(topic) {
+      if (!currentStudent.value || !currentStudent.value.bestTimes) return null;
+      return currentStudent.value.bestTimes[topic] || null;
+    }
+
+    // Guarda progreso sin borrar datos anteriores del estudiante.
+    function persistCurrentStudent() {
+      if (!currentStudent.value) return;
+
+      const users = loadUsers();
+      users[currentStudent.value.id] = {
+        ...currentStudent.value,
+        age: selectedAge.value,
+        streak: streak.value,
+        history: history.value.slice(0, 20),
+      };
+      currentStudent.value = users[currentStudent.value.id];
+      saveUsers(users);
+      localStorage.setItem(CURRENT_USER_KEY, currentStudent.value.id);
+      localStorage.setItem('mathmentor-age', selectedAge.value);
+    }
+
+    // Carga el perfil activo al abrir la app.
+    function loadCurrentStudent() {
+      const users = loadUsers();
+      const currentId = localStorage.getItem(CURRENT_USER_KEY);
+      const student = currentId ? users[currentId] : null;
+
+      if (!student) {
+        if (page === 'app') window.location.href = 'index.html';
+        return;
+      }
+
+      currentStudent.value = {
+        history: [],
+        topicStats: {},
+        bestTimes: {},
+        ...student,
+      };
+      studentName.value = currentStudent.value.name;
+      selectedAge.value = currentStudent.value.age || selectedAge.value || '10-11';
+      streak.value = currentStudent.value.streak || 0;
+      history.value = currentStudent.value.history || [];
+      challengeState.value.bestTime = bestTimeForTopic(selectedTopic.value);
+    }
+
     // Datos
     const {
       features,
@@ -55,6 +191,8 @@ createApp({
       generateChallenge,
       generateChallengeSet,
     } = window.MathMentorData;
+
+    setupFirebaseAuth();
 
     // Valores calculados
     const ageLevelLabel = computed(() => {
@@ -66,6 +204,7 @@ createApp({
       return labels[selectedAge.value] || '';
     });
 
+    // Los temas cambian segun el nivel seleccionado.
     const availableTopics = computed(() => {
       const base = ['arithmetic', 'fractions', 'percentages'];
       if (selectedAge.value === '12-13' || selectedAge.value === '14-15') {
@@ -100,9 +239,36 @@ createApp({
       return challengeState.value.mode === 'active' && challengeState.value.topic !== 'arithmetic';
     });
 
+    // Iniciales para perfiles sin foto.
+    const studentInitials = computed(() => {
+      if (!currentStudent.value?.name) return 'MM';
+      return currentStudent.value.name
+        .split(/\s+/)
+        .slice(0, 2)
+        .map(part => part.charAt(0).toUpperCase())
+        .join('');
+    });
+
+    // Tema mas practicado por el estudiante.
+    const bestTopicLabel = computed(() => {
+      const stats = currentStudent.value?.topicStats || {};
+      const best = Object.entries(stats).sort((a, b) => b[1] - a[1])[0];
+      return best ? topicsConfig[best[0]]?.name || best[0] : 'Nuevo';
+    });
+
+    // Mejor tiempo global entre los retos completados.
+    const bestChallengeLabel = computed(() => {
+      const times = Object.values(currentStudent.value?.bestTimes || {}).filter(Boolean);
+      if (!times.length) return '--';
+      return `${Math.min(...times)}s`;
+    });
+
+    loadCurrentStudent();
+
     // Motor matemático
 
     // Aritmética con orden de operaciones
+    // Aritmetica con orden de operaciones.
     function solveArithmetic(expr) {
       const cleaned = expr.replace(/\s+/g, ' ').trim();
       const tokens = tokenize(cleaned);
@@ -197,6 +363,7 @@ createApp({
       };
     }
 
+    // Separa numeros y signos antes de resolver.
     function tokenize(expr) {
       const normalized = expr
         .replace(/×/g, '*')
@@ -241,6 +408,7 @@ createApp({
     }
 
     // Fracciones
+    // Operaciones basicas con dos fracciones.
     function solveFractions(expr) {
       const parts = expr.match(/(\d+)\/(\d+)\s*([+\-×\*\/÷])\s*(\d+)\/(\d+)/);
       if (!parts) throw new Error('Formato: a/b + c/d (ej: 1/2 + 3/4)');
@@ -354,6 +522,7 @@ createApp({
     }
 
     // Álgebra
+    // Ecuaciones lineales sencillas con x.
     function solveAlgebra(expr) {
       if (!expr.includes('=')) throw new Error('Necesito una ecuación con "=". Ejemplo: 2x + 5 = 15');
 
@@ -468,6 +637,7 @@ createApp({
     }
 
     // Porcentajes
+    // Porcentajes escritos como "25% de 200".
     function solvePercentages(expr) {
       const match = expr.match(/(\d+(?:\.\d+)?)\s*%\s*(?:de|of)\s*(\d+(?:\.\d+)?)/i);
       if (!match) throw new Error('Formato: 25% de 200');
@@ -510,6 +680,7 @@ createApp({
     }
 
     // Potencias
+    // Potencias con el formato base^exponente.
     function solvePowers(expr) {
       const match = expr.match(/(\d+(?:\.\d+)?)\s*\^\s*(\d+)/);
       if (!match) throw new Error('Formato: base^exponente (ej: 2^4)');
@@ -554,6 +725,7 @@ createApp({
     }
 
     // Raíces cuadradas
+    // Raices cuadradas exactas o aproximadas.
     function solveRoots(expr) {
       const match = expr.match(/(?:raiz|sqrt|√)\s*\(?\s*(\d+(?:\.\d+)?)\s*\)?/i);
       if (!match) throw new Error('Formato: raiz(número) o sqrt(número)');
@@ -646,10 +818,57 @@ createApp({
 
     // Acciones
     function startApp() {
-      if (selectedAge.value) {
-        localStorage.setItem('mathmentor-age', selectedAge.value);
-      }
+      const cleanName = studentName.value.trim();
+      if (!selectedAge.value || !cleanName) return;
+
+      const users = loadUsers();
+      const id = normalizeUserId(cleanName);
+      const student = users[id] || createStudent(cleanName, selectedAge.value);
+      student.name = cleanName;
+      student.age = selectedAge.value;
+      users[id] = student;
+
+      saveUsers(users);
+      localStorage.setItem(CURRENT_USER_KEY, id);
+      localStorage.setItem('mathmentor-age', selectedAge.value);
       window.location.href = 'app.html';
+    }
+
+    // Abre el popup de Google y crea/actualiza el perfil.
+    async function signInWithGoogle() {
+      if (!selectedAge.value) return;
+      authMessage.value = '';
+
+      if (!firebaseAuth || !googleProvider) {
+        authMessage.value = 'Falta configurar Firebase. Llena firebase-config.js y activa Google en Firebase Authentication.';
+        return;
+      }
+
+      isAuthLoading.value = true;
+      try {
+        const result = await firebaseAuth.signInWithPopup(googleProvider);
+        const user = result.user;
+        const users = loadUsers();
+        const id = `google:${user.uid}`;
+
+        users[id] = studentFromGoogleUser(user, selectedAge.value, users[id]);
+        saveUsers(users);
+
+        localStorage.setItem(CURRENT_USER_KEY, id);
+        localStorage.setItem('mathmentor-age', selectedAge.value);
+        window.location.href = 'app.html';
+      } catch (e) {
+        const authErrors = {
+          'auth/popup-closed-by-user': 'Cerraste la ventana de Google antes de terminar.',
+          'auth/popup-blocked': 'El navegador bloqueo la ventana emergente de Google.',
+          'auth/operation-not-allowed': 'Google no esta activado en Firebase Authentication.',
+          'auth/unauthorized-domain': 'Este dominio no esta autorizado en Firebase Authentication.',
+          'auth/network-request-failed': 'No se pudo conectar con Firebase. Revisa tu conexion.',
+        };
+        authMessage.value = authErrors[e.code] || `Firebase: ${e.code || 'error'} - ${e.message || 'No se pudo iniciar sesion.'}`;
+      } finally {
+        isAuthLoading.value = false;
+      }
     }
 
     function goHome() {
@@ -671,11 +890,13 @@ createApp({
       challengeAnswered.value = false;
       challengeAnswer.value = '';
       resetChallenge();
+      challengeState.value.bestTime = bestTimeForTopic(topicId);
       nextTick(() => {
         if (mainInput.value) mainInput.value.focus();
       });
     }
 
+    // Completa parentesis simples en entradas como raiz(25.
     function autoCloseParentheses(expr) {
       let openCount = 0;
       let closeCount = 0;
@@ -743,7 +964,7 @@ createApp({
               res = solveArithmetic(expr);
           }
 
-          // Agrega reto
+          // Agrega un reto corto relacionado con el tema.
           res.challenge = generateChallenge(topic, selectedAge.value);
           res.topic = topic;
           resetChallenge();
@@ -751,7 +972,7 @@ createApp({
           result.value = res;
           streak.value++;
 
-          // Guarda historial
+          // Guarda historial del perfil actual.
           history.value.unshift({
             expression: expr,
             answer: res.answer,
@@ -760,6 +981,13 @@ createApp({
 
           // Limita el historial
           if (history.value.length > 20) history.value.pop();
+
+          if (currentStudent.value) {
+            currentStudent.value.solvedCount = (currentStudent.value.solvedCount || 0) + 1;
+            currentStudent.value.topicStats = currentStudent.value.topicStats || {};
+            currentStudent.value.topicStats[topic] = (currentStudent.value.topicStats[topic] || 0) + 1;
+            persistCurrentStudent();
+          }
 
         } catch (e) {
           errorMsg.value = e.message;
@@ -800,9 +1028,11 @@ createApp({
       isDrawingChallenge = false;
     }
 
+    // Inicia una tanda de ejercicios cronometrados.
     function startChallenge() {
       const topic = result.value?.topic || selectedTopic.value;
       resetChallenge();
+      const previousBest = bestTimeForTopic(topic);
 
       // Reinicia el reto usando el tema actual y deja lista la pizarra.
       challengeState.value = {
@@ -824,6 +1054,7 @@ createApp({
         calcX: null,
         calcY: null,
         surrendered: false,
+        bestTime: previousBest,
       };
 
       challengeTimer = setInterval(() => {
@@ -847,6 +1078,7 @@ createApp({
         .replace(/,/g, '.');
     }
 
+    // Acepta respuestas equivalentes, no solo texto exacto.
     function challengeAnswerIsCorrect(exercise, answer) {
       const normalized = normalizeAnswer(answer);
       const accepted = [exercise.answer, ...(exercise.accepted || [])].map(normalizeAnswer);
@@ -919,6 +1151,12 @@ createApp({
         lastImprovement: improvedBy && improvedBy > 0 ? improvedBy : null,
         bestTime: completedAll && (!previousBest || elapsed < previousBest) ? elapsed : previousBest,
       };
+
+      if (currentStudent.value && challengeState.value.bestTime) {
+        currentStudent.value.bestTimes = currentStudent.value.bestTimes || {};
+        currentStudent.value.bestTimes[challengeState.value.topic] = challengeState.value.bestTime;
+        persistCurrentStudent();
+      }
     }
 
     function surrenderChallenge() {
@@ -953,6 +1191,7 @@ createApp({
       };
     }
 
+    // Permite mover la calculadora dentro del modo reto.
     function startChallengeCalcDrag(event) {
       const panel = event.currentTarget.closest('.challenge-calc-panel');
       if (!panel) return;
@@ -1107,11 +1346,28 @@ createApp({
       });
     }
 
+    async function logoutProfile() {
+      resetChallenge();
+      if (firebaseAuth && currentStudent.value?.provider === 'google') {
+        try {
+          await firebaseAuth.signOut();
+        } catch (e) {
+          // Si Google falla al cerrar, al menos salimos del perfil local.
+        }
+      }
+      localStorage.removeItem(CURRENT_USER_KEY);
+      window.location.href = 'index.html';
+    }
+
     // Valores expuestos
     return {
       // Estado
       currentView,
       selectedAge,
+      studentName,
+      currentStudent,
+      authMessage,
+      isAuthLoading,
       selectedTopic,
       expression,
       result,
@@ -1140,9 +1396,13 @@ createApp({
       currentChallengeExercise,
       challengeProgressLabel,
       showChallengeCalculator,
+      studentInitials,
+      bestTopicLabel,
+      bestChallengeLabel,
 
       // Métodos
       startApp,
+      signInWithGoogle,
       goHome,
       scrollStart,
       selectTopic,
@@ -1162,6 +1422,7 @@ createApp({
       stopChallengeDrawing,
       checkChallenge,
       resetProblem,
+      logoutProfile,
     };
   },
 }).mount('#app');
