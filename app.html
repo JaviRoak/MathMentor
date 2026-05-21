@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MathMentor — Calculadora</title>
-  <link rel="stylesheet" href="styles.css?v=13" />
+  <link rel="stylesheet" href="styles.css?v=17" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -23,12 +23,19 @@
           </div>
         </div>
         <div class="header-right">
+          <!-- Datos del estudiante activo. -->
+          <div class="student-badge" v-if="currentStudent">
+            <img class="student-avatar-img" v-if="currentStudent.photoURL" :src="currentStudent.photoURL" :alt="currentStudent.name" />
+            <span class="student-avatar" v-else>{{ studentInitials }}</span>
+            <span class="student-badge-name">{{ currentStudent.name }}</span>
+          </div>
           <div class="streak-badge" v-if="streak > 0">
             RACHA · {{ streak }}
           </div>
           <div class="level-badge">
             {{ ageLevelLabel }}
           </div>
+          <button class="logout-btn" v-if="currentStudent" type="button" @click="logoutProfile">Cambiar</button>
         </div>
       </header>
 
@@ -47,6 +54,34 @@
         </aside>
 
         <main class="workspace">
+          <!-- Resumen rapido del progreso guardado. -->
+          <section class="profile-panel" v-if="currentStudent">
+            <div>
+              <span class="profile-kicker">// PERFIL ACTIVO</span>
+              <h1 class="profile-title">Hola, {{ currentStudent.name }}</h1>
+              <p class="profile-text">Tu avance queda guardado en este dispositivo{{ currentStudent.provider === 'google' ? ' con tu cuenta de Google.' : ' para continuar practicando despues.' }}</p>
+            </div>
+            <div class="profile-stats">
+              <div class="profile-stat">
+                <strong>{{ currentStudent.solvedCount || 0 }}</strong>
+                <span>Ejercicios</span>
+              </div>
+              <div class="profile-stat">
+                <strong>{{ streak }}</strong>
+                <span>Racha</span>
+              </div>
+              <div class="profile-stat">
+                <strong>{{ bestTopicLabel }}</strong>
+                <span>Mejor tema</span>
+              </div>
+              <div class="profile-stat">
+                <strong>{{ bestChallengeLabel }}</strong>
+                <span>Mejor reto</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Entrada principal para resolver ejercicios. -->
           <div class="input-zone">
             <div class="input-header">
               <span class="input-topic-icon">{{ currentTopicData.icon }}</span>
@@ -285,7 +320,10 @@
   </div>
 
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <script src="data.js?v=13"></script>
-  <script src="scripts.js?v=13"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+  <script src="firebase-config.js?v=2"></script>
+  <script src="data.js?v=16"></script>
+  <script src="scripts.js?v=18"></script>
 </body>
 </html>
