@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MathMentor — Calculadora</title>
-  <link rel="stylesheet" href="styles.css?v=22" />
+  <link rel="stylesheet" href="styles.css?v=29" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -142,6 +142,165 @@
                     <div class="step-content">
                       <div class="step-operation" v-html="step.operation"></div>
                       <p class="step-explain">{{ step.explanation }}</p>
+                      <div class="addition-visual" v-if="step.additionVisual">
+                        <div class="addition-board" :style="{ '--cols': step.additionVisual.columns.length }">
+                          <div class="addition-row addition-carry-row">
+                            <span
+                              v-for="(column, colIndex) in step.additionVisual.columns"
+                              :key="'carry-' + colIndex"
+                              class="addition-cell addition-carry"
+                              :style="{ animationDelay: column.delay }"
+                            >
+                              {{ column.carryDisplay }}
+                            </span>
+                          </div>
+                          <div class="addition-row">
+                            <span
+                              v-for="(column, colIndex) in step.additionVisual.columns"
+                              :key="'top-' + colIndex"
+                              class="addition-cell"
+                            >
+                              {{ column.topDisplay }}
+                            </span>
+                          </div>
+                          <div class="addition-row addition-bottom-row">
+                            <span class="addition-plus">+</span>
+                            <span
+                              v-for="(column, colIndex) in step.additionVisual.columns"
+                              :key="'bottom-' + colIndex"
+                              class="addition-cell"
+                            >
+                              {{ column.bottomDisplay }}
+                            </span>
+                          </div>
+                          <div class="addition-line"></div>
+                          <div class="addition-row addition-result-row">
+                            <span
+                              v-for="(column, colIndex) in step.additionVisual.columns"
+                              :key="'result-' + colIndex"
+                              class="addition-cell addition-result-digit"
+                              :style="{ animationDelay: column.delay }"
+                            >
+                              {{ column.result }}
+                            </span>
+                          </div>
+                        </div>
+                        <div class="addition-breakdown">
+                          <span
+                            v-for="(column, colIndex) in step.additionVisual.columns.slice().reverse()"
+                            :key="'explain-' + colIndex"
+                            class="addition-chip"
+                            :style="{ animationDelay: column.delay }"
+                          >
+                            {{ column.place }}: {{ column.top }} + {{ column.bottom }}<template v-if="column.carryIn"> + {{ column.carryIn }}</template> = {{ column.raw }}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="addition-visual subtraction-visual" v-if="step.subtractionVisual">
+                        <div class="addition-board subtraction-board" :style="{ '--cols': step.subtractionVisual.columns.length }">
+                          <div class="addition-row addition-carry-row">
+                            <span
+                              v-for="(column, colIndex) in step.subtractionVisual.columns"
+                              :key="'borrow-' + colIndex"
+                              class="addition-cell addition-carry subtraction-borrow"
+                              :style="{ animationDelay: column.delay }"
+                            >
+                              {{ column.borrowDisplay }}
+                            </span>
+                          </div>
+                          <div class="addition-row">
+                            <span
+                              v-for="(column, colIndex) in step.subtractionVisual.columns"
+                              :key="'sub-top-' + colIndex"
+                              :class="['addition-cell', { 'subtraction-adjusted': column.borrowed || column.wasReduced }]"
+                            >
+                              {{ (column.borrowed || column.wasReduced) ? column.adjustedTopDisplay : column.topDisplay }}
+                            </span>
+                          </div>
+                          <div class="addition-row addition-bottom-row">
+                            <span class="addition-plus subtraction-minus">-</span>
+                            <span
+                              v-for="(column, colIndex) in step.subtractionVisual.columns"
+                              :key="'sub-bottom-' + colIndex"
+                              class="addition-cell"
+                            >
+                              {{ column.bottomDisplay }}
+                            </span>
+                          </div>
+                          <div class="addition-line subtraction-line"></div>
+                          <div class="addition-row addition-result-row">
+                            <span
+                              v-for="(column, colIndex) in step.subtractionVisual.columns"
+                              :key="'sub-result-' + colIndex"
+                              class="addition-cell addition-result-digit"
+                              :style="{ animationDelay: column.delay }"
+                            >
+                              {{ column.result }}
+                            </span>
+                          </div>
+                        </div>
+                        <div class="addition-breakdown">
+                          <span
+                            v-for="(column, colIndex) in step.subtractionVisual.columns.slice().reverse()"
+                            :key="'sub-explain-' + colIndex"
+                            class="addition-chip subtraction-chip"
+                            :style="{ animationDelay: column.delay }"
+                          >
+                            {{ column.place }}: <template v-if="column.borrowed">{{ column.beforeBorrow }} pide prestado → </template>{{ column.adjustedTop }} - {{ column.bottom }} = {{ column.raw }}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="division-visual" v-if="step.divisionVisual">
+                        <div class="division-house">
+                          <div class="division-quotient" :style="{ '--q-width': step.divisionVisual.quotientWidth }">{{ step.divisionVisual.quotientDisplay }}</div>
+                          <div class="division-layout">
+                            <span class="division-divisor">{{ step.divisionVisual.divisor }}</span>
+                            <div class="division-work">
+                              <div class="division-dividend-grid" :style="{ '--digits': step.divisionVisual.dividendText.length }">
+                                <span
+                                  v-for="(digit, digitIndex) in step.divisionVisual.dividendText.split('')"
+                                  :key="'dividend-digit-' + digitIndex"
+                                  class="division-digit"
+                                >
+                                  {{ digit }}
+                                </span>
+                              </div>
+                              <template v-for="(divisionPart, partIndex) in step.divisionVisual.steps" :key="'work-' + partIndex">
+                                <div class="division-work-row" :style="{ '--digits': step.divisionVisual.dividendText.length, animationDelay: divisionPart.delay }">
+                                  <span
+                                    class="division-work-number division-product"
+                                    :style="{ gridColumn: (divisionPart.productStart + 1) + ' / span ' + divisionPart.productText.length }"
+                                  >
+                                    {{ divisionPart.productText }}
+                                  </span>
+                                </div>
+                                <div class="division-subline" :style="{ '--digits': step.divisionVisual.dividendText.length, '--start': divisionPart.productStart + 1, '--span': divisionPart.productText.length, animationDelay: divisionPart.delay }"></div>
+                                <div class="division-work-row" :style="{ '--digits': step.divisionVisual.dividendText.length, animationDelay: divisionPart.delay }">
+                                  <span
+                                    class="division-work-number division-partial-remainder"
+                                    :style="{ gridColumn: (divisionPart.remainderStart + 1) + ' / span ' + divisionPart.remainderText.length }"
+                                  >
+                                    {{ divisionPart.remainderText }}
+                                  </span>
+                                </div>
+                              </template>
+                            </div>
+                          </div>
+                          <div class="division-remainder" v-if="!step.divisionVisual.exact">
+                            residuo {{ step.divisionVisual.remainder }}
+                          </div>
+                        </div>
+                        <div class="division-breakdown">
+                          <span
+                            v-for="(divisionPart, partIndex) in step.divisionVisual.steps"
+                            :key="'division-' + partIndex"
+                            class="division-chip"
+                            :style="{ animationDelay: divisionPart.delay }"
+                          >
+                            {{ divisionPart.current }} ÷ {{ step.divisionVisual.divisor }} → {{ divisionPart.qDigit }}; {{ divisionPart.qDigit }} × {{ step.divisionVisual.divisor }} = {{ divisionPart.product }}; sobra {{ divisionPart.remainder }}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -340,6 +499,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
   <script src="firebase-config.js?v=2"></script>
   <script src="data.js?v=16"></script>
-  <script src="scripts.js?v=19"></script>
+  <script src="addition-visuals.js?v=6"></script>
+  <script src="scripts.js?v=20"></script>
 </body>
 </html>
