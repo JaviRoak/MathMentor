@@ -302,9 +302,16 @@ createApp({
               opName = 'dividir';
             }
 
+            const divisionStep = (op === '/' || op === '÷')
+              ? window.MathMentorAddition.describeDivision(a, b, res, formatNum)
+              : null;
+
             steps.push({
               operation: `<span class="highlight">${a} ${op === '*' ? '×' : op === '/' || op === '÷' ? '÷' : op} ${b} = ${formatNum(res)}</span>`,
-              explanation: `Primero buscamos multiplicaciones o divisiones porque tienen prioridad sobre la suma y la resta. Aquí toca ${opName}: ${a} ${op === '*' ? '×' : op === '/' || op === '÷' ? '÷' : op} ${b} = ${formatNum(res)}. Después reemplazamos solo esa parte por ${formatNum(res)} y seguimos con lo que queda.`,
+              explanation: divisionStep
+                ? divisionStep.explanation
+                : `Primero buscamos multiplicaciones o divisiones porque tienen prioridad sobre la suma y la resta. Aquí toca ${opName}: ${a} ${op === '*' ? '×' : op === '/' || op === '÷' ? '÷' : op} ${b} = ${formatNum(res)}. Después reemplazamos solo esa parte por ${formatNum(res)} y seguimos con lo que queda.`,
+              divisionVisual: divisionStep ? divisionStep.divisionVisual : null,
               visible: true,
             });
 
@@ -333,15 +340,20 @@ createApp({
               res = a - b;
             }
 
+            const additionStep = op === '+'
+              ? window.MathMentorAddition.describeAddition(a, b, res, hadPriorityOps, formatNum)
+              : null;
+            const subtractionStep = op === '-'
+              ? window.MathMentorAddition.describeSubtraction(a, b, res, hadPriorityOps, formatNum)
+              : null;
+
             steps.push({
               operation: `<span class="highlight">${a} ${op} ${b} = ${formatNum(res)}</span>`,
               explanation: op === '+'
-                ? hadPriorityOps
-                  ? `Después de resolver las multiplicaciones o divisiones, seguimos con la suma. Sumamos ${a} + ${b}: empezamos en ${a}, agregamos ${b} y llegamos a ${formatNum(res)}.`
-                  : `Esta es una suma directa. Sumamos ${a} + ${b}: empezamos en ${a}, agregamos ${b} y llegamos a ${formatNum(res)}.`
-                : hadPriorityOps
-                  ? `Después de resolver las multiplicaciones o divisiones, seguimos con la resta. Restamos ${a} - ${b}: empezamos en ${a}, quitamos ${b} y llegamos a ${formatNum(res)}.`
-                  : `Esta es una resta directa. Restamos ${a} - ${b}: empezamos en ${a}, quitamos ${b} y llegamos a ${formatNum(res)}.`,
+                ? additionStep.explanation
+                : subtractionStep.explanation,
+              additionVisual: additionStep ? additionStep.additionVisual : null,
+              subtractionVisual: subtractionStep ? subtractionStep.subtractionVisual : null,
               visible: true,
             });
 
