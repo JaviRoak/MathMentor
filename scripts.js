@@ -14,6 +14,7 @@ createApp({
     const currentStudent = ref(null);
     const authMessage = ref('');
     const isAuthLoading = ref(false);
+    const isDarkMode = ref((localStorage.getItem('mathmentor-theme') || 'dark') !== 'light');
     const selectedAge = ref(page === 'app' ? (localStorage.getItem('mathmentor-age') || '10-11') : null);
     const selectedTopic = ref('arithmetic');
     const expression = ref('');
@@ -31,6 +32,7 @@ createApp({
     let challengeTimer = null;
     let isDrawingChallenge = false;
     let firebaseAuth = null;
+    let firebaseDb = null;
     let googleProvider = null;
 
     // Estado completo del reto activo.
@@ -113,6 +115,7 @@ createApp({
       try {
         if (!firebase.apps.length) firebase.initializeApp(config);
         firebaseAuth = firebase.auth();
+        firebaseDb = firebase.firestore ? firebase.firestore() : null;
         googleProvider = new firebase.auth.GoogleAuthProvider();
         firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
       } catch (e) {
@@ -136,6 +139,47 @@ createApp({
       };
     }
 
+    function getGoogleUidFromId(id) {
+      return id && id.startsWith('google:') ? id.replace('google:', '') : null;
+    }
+
+    function canSyncStudent(student = currentStudent.value) {
+      return !!(firebaseDb && student && student.provider === 'google' && getGoogleUidFromId(student.id));
+    }
+
+    function studentForStorage(student) {
+      return {
+        ...student,
+        age: selectedAge.value || student.age,
+        streak: streak.value,
+        history: history.value.slice(0, 20),
+        updatedAt: Date.now(),
+      };
+    }
+
+    async function loadCloudStudent(uid) {
+      if (!firebaseDb || !uid) return null;
+
+      try {
+        const doc = await firebaseDb.collection('users').doc(uid).get();
+        return doc.exists ? doc.data() : null;
+      } catch (e) {
+        authMessage.value = 'No se pudo cargar el progreso en la nube. Se usara la copia local.';
+        return null;
+      }
+    }
+
+    async function saveCloudStudent(student) {
+      if (!canSyncStudent(student)) return;
+
+      const uid = getGoogleUidFromId(student.id);
+      try {
+        await firebaseDb.collection('users').doc(uid).set(student, { merge: true });
+      } catch (e) {
+        authMessage.value = 'Progreso guardado localmente. No se pudo sincronizar con la nube.';
+      }
+    }
+
     // Mejor marca por tema para mostrarla al repetir retos.
     function bestTimeForTopic(topic) {
       if (!currentStudent.value || !currentStudent.value.bestTimes) return null;
@@ -147,27 +191,35 @@ createApp({
       if (!currentStudent.value) return;
 
       const users = loadUsers();
-      users[currentStudent.value.id] = {
-        ...currentStudent.value,
-        age: selectedAge.value,
-        streak: streak.value,
-        history: history.value.slice(0, 20),
-      };
+      users[currentStudent.value.id] = studentForStorage(currentStudent.value);
       currentStudent.value = users[currentStudent.value.id];
       saveUsers(users);
       localStorage.setItem(CURRENT_USER_KEY, currentStudent.value.id);
       localStorage.setItem('mathmentor-age', selectedAge.value);
+      saveCloudStudent(currentStudent.value);
     }
 
     // Carga el perfil activo al abrir la app.
-    function loadCurrentStudent() {
+    async function loadCurrentStudent() {
       const users = loadUsers();
       const currentId = localStorage.getItem(CURRENT_USER_KEY);
-      const student = currentId ? users[currentId] : null;
+      let student = currentId ? users[currentId] : null;
 
       if (!student) {
         if (page === 'app') window.location.href = 'index.html';
         return;
+      }
+
+      const cloudStudent = await loadCloudStudent(getGoogleUidFromId(student.id));
+      if (cloudStudent) {
+        student = {
+          ...student,
+          ...cloudStudent,
+          id: student.id,
+          provider: 'google',
+        };
+        users[student.id] = student;
+        saveUsers(users);
       }
 
       currentStudent.value = {
@@ -194,6 +246,18 @@ createApp({
     } = window.MathMentorData;
 
     setupFirebaseAuth();
+
+    function applyTheme() {
+      document.body.classList.toggle('theme-light', !isDarkMode.value);
+      localStorage.setItem('mathmentor-theme', isDarkMode.value ? 'dark' : 'light');
+    }
+
+    function toggleTheme() {
+      isDarkMode.value = !isDarkMode.value;
+      applyTheme();
+    }
+
+    applyTheme();
 
     // Valores calculados
     const ageLevelLabel = computed(() => {
@@ -863,9 +927,14 @@ createApp({
         const user = result.user;
         const users = loadUsers();
         const id = `google:${user.uid}`;
+        const cloudStudent = await loadCloudStudent(user.uid);
 
-        users[id] = studentFromGoogleUser(user, selectedAge.value, users[id]);
+        users[id] = studentFromGoogleUser(user, selectedAge.value, {
+          ...users[id],
+          ...cloudStudent,
+        });
         saveUsers(users);
+        await saveCloudStudent(users[id]);
 
         localStorage.setItem(CURRENT_USER_KEY, id);
         localStorage.setItem('mathmentor-age', selectedAge.value);
@@ -1204,6 +1273,72 @@ createApp({
       };
     }
 
+    function columnFocusIndex(visual) {
+      if (!visual || !visual.columns?.length) return 0;
+      return Number.isInteger(visual.focusIndex) ? visual.focusIndex : 0;
+    }
+
+    function focusColumnVisual(visual, index) {
+      if (!visual || !visual.columns?.length) return;
+      visual.focusIndex = index;
+    }
+
+    function isColumnProcessed(visual, colIndex) {
+      return colIndex >= columnFocusIndex(visual);
+    }
+
+    function isCarryVisible(visual, colIndex) {
+      return colIndex >= Math.max(0, columnFocusIndex(visual) - 1);
+    }
+
+    function isSubtractionAdjustmentVisible(visual, column, colIndex) {
+      const focusIndex = columnFocusIndex(visual);
+      return (column.borrowed && colIndex >= focusIndex) || (column.wasReduced && colIndex >= Math.max(0, focusIndex - 1));
+    }
+
+    function subtractionTopDisplay(visual, column, colIndex) {
+      return isSubtractionAdjustmentVisible(visual, column, colIndex) ? column.adjustedTopDisplay : column.topDisplay;
+    }
+
+    function columnChipClass(visual, index, extraClass = '') {
+      return [
+        'addition-chip',
+        extraClass,
+        { active: Number.isInteger(visual?.focusIndex) && visual.focusIndex === index },
+      ];
+    }
+
+    function visualStepDelay(visual, delay) {
+      return Number.isInteger(visual?.focusIndex) ? '0s' : delay;
+    }
+
+    function visualFocusClass(visual) {
+      return { 'visual-focused': Number.isInteger(visual?.focusIndex) };
+    }
+
+    function divisionFocusIndex(visual) {
+      if (!visual || !visual.steps?.length) return 0;
+      return Number.isInteger(visual.focusIndex) ? visual.focusIndex : visual.steps.length - 1;
+    }
+
+    function focusDivisionVisual(visual, index) {
+      if (!visual || !visual.steps?.length) return;
+      visual.focusIndex = index;
+    }
+
+    function isDivisionPartVisible(visual, partIndex) {
+      return partIndex <= divisionFocusIndex(visual);
+    }
+
+    function divisionQuotientDisplay(visual) {
+      if (!visual || !visual.steps?.length) return visual?.quotientDisplay || '0';
+      return visual.steps.slice(0, divisionFocusIndex(visual) + 1).map(part => part.qDigit).join('') || '0';
+    }
+
+    function isDivisionComplete(visual) {
+      return divisionFocusIndex(visual) >= (visual.steps?.length || 1) - 1;
+    }
+
     // Permite mover la calculadora dentro del modo reto.
     function startChallengeCalcDrag(event) {
       const panel = event.currentTarget.closest('.challenge-calc-panel');
@@ -1387,6 +1522,7 @@ createApp({
       currentStudent,
       authMessage,
       isAuthLoading,
+      isDarkMode,
       selectedTopic,
       expression,
       result,
@@ -1423,6 +1559,7 @@ createApp({
       // Métodos
       startApp,
       signInWithGoogle,
+      toggleTheme,
       goHome,
       scrollStart,
       selectTopic,
@@ -1435,6 +1572,18 @@ createApp({
       resetChallenge,
       insertChallengeCalcKey,
       challengeCalcStyle,
+      focusColumnVisual,
+      isColumnProcessed,
+      isCarryVisible,
+      isSubtractionAdjustmentVisible,
+      subtractionTopDisplay,
+      columnChipClass,
+      visualStepDelay,
+      visualFocusClass,
+      focusDivisionVisual,
+      isDivisionPartVisible,
+      divisionQuotientDisplay,
+      isDivisionComplete,
       startChallengeCalcDrag,
       clearChallengeBoard,
       startChallengeDrawing,
