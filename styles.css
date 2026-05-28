@@ -2090,6 +2090,37 @@ body.theme-light .site-header {
   box-shadow: 0 0 18px rgba(74, 168, 255, 0.08);
 }
 
+body.theme-light .addition-chip,
+body.theme-light .division-chip {
+  background: rgba(25, 118, 210, 0.06);
+  border-color: rgba(25, 118, 210, 0.18);
+  color: #3f5874;
+  box-shadow: none;
+}
+
+body.theme-light .addition-chip:hover,
+body.theme-light .addition-chip.active,
+body.theme-light .division-chip:hover,
+body.theme-light .division-chip.active {
+  background: rgba(25, 118, 210, 0.12);
+  border-color: rgba(25, 118, 210, 0.45);
+  color: #172033;
+  box-shadow: 0 8px 24px rgba(25, 118, 210, 0.08);
+}
+
+body.theme-light .subtraction-chip {
+  background: rgba(215, 55, 85, 0.06);
+  border-color: rgba(215, 55, 85, 0.18);
+  color: #704356;
+}
+
+body.theme-light .subtraction-chip:hover,
+body.theme-light .subtraction-chip.active {
+  background: rgba(215, 55, 85, 0.12);
+  border-color: rgba(215, 55, 85, 0.42);
+  color: #172033;
+}
+
 .visual-pending {
   visibility: hidden !important;
   opacity: 0 !important;
